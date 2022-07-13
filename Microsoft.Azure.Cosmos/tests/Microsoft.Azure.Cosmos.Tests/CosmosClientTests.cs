@@ -332,7 +332,8 @@ namespace Microsoft.Azure.Cosmos.Tests
             mockHttpHandler.Setup(x => x.SendAsync(
                     It.IsAny<HttpRequestMessage>(),
                     It.IsAny<CancellationToken>()))
-                .Returns((HttpRequestMessage request, CancellationToken cancellationToken) => {
+                .Returns((HttpRequestMessage request, CancellationToken cancellationToken) =>
+                {
 
                     HttpResponseMessage responseMessage = new HttpResponseMessage((HttpStatusCode)defaultStatusCode);
                     if (request.RequestUri != VmMetadataApiHandler.vmMetadataEndpointUrl)
@@ -354,7 +355,7 @@ namespace Microsoft.Azure.Cosmos.Tests
                             authValidated = HttpUtility.UrlDecode(authValues.First()) == currentKey;
                         }
                         else
-                        { 
+                        {
                             authValidated = AuthorizationHelper.CheckPayloadUsingKey(
                                 tokenFromAuthHeader,
                                 request.Method.Method,
@@ -418,7 +419,7 @@ namespace Microsoft.Azure.Cosmos.Tests
 
         private static string NewRamdonResourceToken()
         {
-            return "type=resource&ver=1.0&sig="  + Convert.ToBase64String(Encoding.UTF8.GetBytes(Guid.NewGuid().ToString()));
+            return "type=resource&ver=1.0&sig=" + Convert.ToBase64String(Encoding.UTF8.GetBytes(Guid.NewGuid().ToString()));
         }
 
         [TestMethod]
@@ -454,6 +455,32 @@ namespace Microsoft.Azure.Cosmos.Tests
             }
 
             Assert.AreEqual(0, errors.Count, $"{Environment.NewLine}Errors found in trace:{Environment.NewLine}{assertMsg}");
+        }
+
+        [TestMethod]
+        public async Task ChangeOptionsReflectedOnUsage()
+        {
+            CosmosClientOptions options = new();
+
+            CosmosClient client = new(ConnectionString, options);
+
+            bool factoryCalled = false;
+            client.ClientOptions.HttpClientFactory = () =>
+            {
+                factoryCalled = true;
+                return new HttpClient();
+            };
+
+            try
+            {
+                await client.CreateDatabaseAsync("test");
+            }
+            catch (Exception)
+            {
+                // test failing isn't important
+            }
+
+            Assert.IsTrue(factoryCalled, "Should have called the HttpClientFactory method and set the flag.");
         }
 
         private class TestTraceListener : TraceListener
